@@ -1,7 +1,7 @@
 rgvar = {
     "rg1" = {
         name     = "rg-fore1"
-        location = "centralindia"
+        location =  "East US"
         tags     = {
             env  = "dev"
             dept = "IT"
@@ -9,7 +9,7 @@ rgvar = {
     }
     "rg2" = {
         name     = "rg-fore2"
-        location = "centralindia"
+        location =  "East US"
         tags     = {
             env  = "prod"
             dept = "HR"

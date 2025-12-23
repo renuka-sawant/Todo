@@ -1,3 +1,6 @@
+# -------------------------------
+# NETWORK INTERFACE
+# -------------------------------
 resource "azurerm_network_interface" "nic" {
   for_each            = var.nics
   name                = each.value.network_interface_name
@@ -10,32 +13,39 @@ resource "azurerm_network_interface" "nic" {
       name                          = ip_configuration.value.name
       private_ip_address_allocation = ip_configuration.value.private_ip_address_allocation
 
-      subnet_id = lookup(
-        lookup(var.subnet_ids, ip_configuration.value.vnet, {}),
-        ip_configuration.value.subnet,
-        null
-      )
+      # ✅ FIX: Direct subnet_id access (no lookup, no null)
+      subnet_id = var.subnet_ids[
+        ip_configuration.value.vnet
+      ][
+        ip_configuration.value.subnet
+      ]
 
+      # Public IP only for frontend (safe lookup)
       public_ip_address_id = lookup(module.publicip.pip_ids, each.key, null)
     }
   }
 }
 
-// Instantiate public IP resources from the publicip module when vmpip has entries.
+# -------------------------------
+# PUBLIC IP MODULE
+# -------------------------------
 module "publicip" {
   source = "../publicip"
   vmpip  = var.vmpip
 }
 
+# -------------------------------
+# LINUX VIRTUAL MACHINES
+# -------------------------------
 resource "azurerm_linux_virtual_machine" "vm" {
-  for_each              = var.vms
-  name                  = each.value.vm_name
-  location              = each.value.location
-  resource_group_name   = each.value.resource_group_name
-  size                  = each.value.vm_size
+  for_each            = var.vms
+  name                = each.value.vm_name
+  location            = each.value.location
+  resource_group_name = each.value.resource_group_name
+  size                = each.value.vm_size
 
-  admin_username = each.value.admin_username
-  admin_password = each.value.admin_password
+  admin_username                  = each.value.admin_username
+  admin_password                  = each.value.admin_password
   disable_password_authentication = each.value.disable_password_authentication
 
   network_interface_ids = [
