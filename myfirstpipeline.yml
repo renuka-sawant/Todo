@@ -8,7 +8,7 @@ jobs:
   displayName: 'Terraform | Init, Plan and Apply'
 
   steps:
-  # -------------------------------
+  # --------------------------------
   # Install Terraform CLI
   # -------------------------------
   - task: TerraformInstaller@1
