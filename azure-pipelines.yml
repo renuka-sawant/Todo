@@ -1,0 +1,80 @@
+trigger:
+- main
+
+pool: myagentpool
+
+jobs:
+- job: TerraformInitPlan
+  displayName: 'Terraform | Init, Plan and Apply'
+
+  steps:
+  # -------------------------------
+  # Install Terraform CLI
+  # -------------------------------
+  - task: TerraformInstaller@1
+    displayName: 'Install Terraform CLI'
+    inputs:
+      terraformVersion: 'latest'
+
+  # -------------------------------
+  # Verify Terraform installation
+  # -------------------------------
+  - script: |
+      echo "Terraform binary path:"
+      where terraform
+
+      echo "Repository root path:"
+      echo "$(System.DefaultWorkingDirectory)"
+    displayName: 'Verify Terraform Installation and Workspace Paths'
+
+  # -------------------------------
+  # Terraform Init (Remote Backend)
+  # -------------------------------
+  - task: TerraformTask@5
+    displayName: 'Terraform Init (Configure Remote Backend)'
+    inputs:
+      provider: 'azurerm'
+      command: 'init'
+      workingDirectory: '$(System.DefaultWorkingDirectory)/dev'
+      backendServiceArm: 'dev-serviceconn1'
+      backendAzureRmStorageAccountName: 'perstg41'
+      backendAzureRmContainerName: 'percnt'
+      backendAzureRmKey: 'tmi.tfstate'
+
+  # -----------------------------------
+  # Security Scan | tfsec
+  # -----------------------------------
+  - task: PowerShell@2
+    displayName: 'Security Scan | tfsec'
+    inputs:
+      targetType: 'inline'
+      script: |
+        Write-Host "Installing tfsec..."
+        Invoke-WebRequest `
+          -Uri https://github.com/aquasecurity/tfsec/releases/latest/download/tfsec-windows-amd64.exe `
+          -OutFile tfsec.exe
+
+        Write-Host "Running tfsec scan..."
+        .\tfsec.exe $(System.DefaultWorkingDirectory)/dev
+
+  # -------------------------------
+  # Terraform Plan
+  # -------------------------------
+  - task: TerraformTask@5
+    displayName: 'Terraform Plan (Generate Execution Plan)'
+    inputs:
+      provider: 'azurerm'
+      command: 'plan'
+      workingDirectory: '$(System.DefaultWorkingDirectory)/dev'
+      environmentServiceNameAzureRM: 'dev-serviceconn1'
+
+  # -------------------------------
+  # Terraform Apply
+  # -------------------------------
+  - task: TerraformTask@5
+    displayName: 'Terraform Apply (Provision Infrastructure)'
+    inputs:
+      provider: 'azurerm'
+      command: 'apply'
+      workingDirectory: '$(System.DefaultWorkingDirectory)/dev'
+      environmentServiceNameAzureRM: 'dev-serviceconn1'
